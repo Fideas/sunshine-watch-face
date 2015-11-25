@@ -37,7 +37,6 @@ import android.view.WindowInsets;
 
 import java.lang.ref.WeakReference;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
@@ -51,7 +50,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
      * displayed in interactive mode.
      */
-    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(1);
+    private static final long INTERACTIVE_UPDATE_RATE_MS = 500;
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
@@ -97,7 +96,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 mTime.setToNow();
             }
         };
-        int mTapCount;
 
         float mXOffset;
         float mYOffset;
@@ -107,6 +105,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
          * disable anti-aliasing in ambient mode.
          */
         boolean mLowBitAmbient;
+        boolean mShouldDrawColons;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -225,6 +224,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
+            mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
+            String text;
             // Draw the background.
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
@@ -232,9 +233,12 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
             }
 
-            // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
             mTime.setToNow();
-            String text = String.format("%d:%02d", mTime.hour, mTime.minute);
+            if (isInAmbientMode() || mShouldDrawColons) {
+                text = String.format("%d:%02d", mTime.hour, mTime.minute);
+            } else {
+                text = String.format("%d %02d", mTime.hour, mTime.minute);
+            }
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
         }
 
