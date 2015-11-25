@@ -38,36 +38,88 @@ import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback {
+public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
+        GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
 
-    private final String LOG_TAG = MainActivity.class.getSimpleName();
-    private static final String DETAILFRAGMENT_TAG = "DFTAG";
-    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     public static final String PROPERTY_REG_ID = "registration_id";
-    private static final String PROPERTY_APP_VERSION = "appVersion";
-
     /**
      * Substitute you own project number here. This project number comes
      * from the Google Developers Console.
      */
     static final String PROJECT_NUMBER = "227391488870";
-
+    private static final String DETAILFRAGMENT_TAG = "DFTAG";
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+    private static final String PROPERTY_APP_VERSION = "appVersion";
+    private static final String FORECAST_PATH = "/forecast";
+    private static final String MAX_TEMP_KEY = "max-temp";
+    private static final String MIN_TEMP_KEY = "min-temp";
+    private static final String LOG_TAG = MainActivity.class.getSimpleName();
+    private static GoogleApiClient mGoogleApiClient;
     private boolean mTwoPane;
     private String mLocation;
     private GoogleCloudMessaging mGcm;
+    private boolean mResolvingError = false;
+
+    /**
+     * @return Application's version code from the {@code PackageManager}.
+     */
+    private static int getAppVersion(Context context) {
+        try {
+            PackageInfo packageInfo = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            return packageInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            // Should never happen. WHAT DID YOU DO?!?!
+            throw new RuntimeException("Could not get package name: " + e);
+        }
+    }
+
+    public static void sendTodayForecast(double maxTemp, double minTemp) {
+        PutDataMapRequest dataMap = PutDataMapRequest.create(FORECAST_PATH);
+        dataMap.getDataMap().putDouble(MAX_TEMP_KEY, maxTemp);
+        dataMap.getDataMap().putDouble(MIN_TEMP_KEY, minTemp);
+        PutDataRequest request = dataMap.asPutDataRequest();
+
+        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
+                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+                    @Override
+                    public void onResult(DataApi.DataItemResult dataItemResult) {
+                        if (!dataItemResult.getStatus().isSuccess()) {
+                            Log.e(LOG_TAG, "ERROR: failed to putDataItem, status code: "
+                                    + dataItemResult.getStatus().getStatusCode());
+                        } else {
+                            Log.d(LOG_TAG, "Data item set: "
+                                    + dataItemResult.getDataItem().getUri());
+                        }
+                    }
+                });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+
         mLocation = Utility.getPreferredLocation(this);
         Uri contentUri = getIntent() != null ? getIntent().getData() : null;
 
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
@@ -95,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
             getSupportActionBar().setElevation(0f);
         }
 
-        ForecastFragment forecastFragment =  ((ForecastFragment)getSupportFragmentManager()
+        ForecastFragment forecastFragment = ((ForecastFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.fragment_forecast));
         forecastFragment.setUseTodayLayout(!mTwoPane);
         if (contentUri != null) {
@@ -113,10 +165,10 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
 
             if (PROJECT_NUMBER.equals("Your Project Number")) {
                 new AlertDialog.Builder(this)
-                .setTitle("Needs Project Number")
-                .setMessage("GCM will not function in Sunshine until you set the Project Number to the one from the Google Developers Console.")
-                .setPositiveButton(android.R.string.ok, null)
-                .create().show();
+                        .setTitle("Needs Project Number")
+                        .setMessage("GCM will not function in Sunshine until you set the Project Number to the one from the Google Developers Console.")
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create().show();
             } else if (regId.isEmpty()) {
                 registerInBackground(this);
             }
@@ -125,6 +177,22 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
             // Store regID as null
             storeRegistrationId(this, null);
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (!mResolvingError) {
+            mGoogleApiClient.connect();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+        super.onStop();
     }
 
     @Override
@@ -162,12 +230,12 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         String location = Utility.getPreferredLocation(this);
         // update the location in our second pane using the fragment manager
         if (location != null && !location.equals(mLocation)) {
-            ForecastFragment ff = (ForecastFragment)getSupportFragmentManager().findFragmentById(R.id.fragment_forecast);
-            if ( null != ff ) {
+            ForecastFragment ff = (ForecastFragment) getSupportFragmentManager().findFragmentById(R.id.fragment_forecast);
+            if (null != ff) {
                 ff.onLocationChanged();
             }
-            DetailFragment df = (DetailFragment)getSupportFragmentManager().findFragmentByTag(DETAILFRAGMENT_TAG);
-            if ( null != df ) {
+            DetailFragment df = (DetailFragment) getSupportFragmentManager().findFragmentByTag(DETAILFRAGMENT_TAG);
+            if (null != df) {
                 df.onLocationChanged(location);
             }
             mLocation = location;
@@ -222,11 +290,11 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
 
     /**
      * Gets the current registration ID for application on GCM service.
-     * <p>
+     * <p/>
      * If result is empty, the app needs to register.
      *
      * @return registration ID, or empty string if there is no existing
-     *         registration ID.
+     * registration ID.
      */
     private String getRegistrationId(Context context) {
         final SharedPreferences prefs = getGCMPreferences(context);
@@ -259,22 +327,8 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     }
 
     /**
-     * @return Application's version code from the {@code PackageManager}.
-     */
-    private static int getAppVersion(Context context) {
-        try {
-            PackageInfo packageInfo = context.getPackageManager()
-                    .getPackageInfo(context.getPackageName(), 0);
-            return packageInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            // Should never happen. WHAT DID YOU DO?!?!
-            throw new RuntimeException("Could not get package name: " + e);
-        }
-    }
-
-    /**
      * Registers the application with GCM servers asynchronously.
-     * <p>
+     * <p/>
      * Stores the registration ID and app versionCode in the application's
      * shared preferences.
      */
@@ -317,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
      * {@code SharedPreferences}.
      *
      * @param context application's context.
-     * @param regId registration ID
+     * @param regId   registration ID
      */
     private void storeRegistrationId(Context context, String regId) {
         final SharedPreferences prefs = getGCMPreferences(context);
@@ -327,5 +381,21 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         editor.putString(PROPERTY_REG_ID, regId);
         editor.putInt(PROPERTY_APP_VERSION, appVersion);
         editor.commit();
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.d(LOG_TAG, "onConnected: " + bundle);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d(LOG_TAG, "onConnectionSuspended: " + i);
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(LOG_TAG, "onConnectionFailed: " + connectionResult);
+
     }
 }
