@@ -680,8 +680,10 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
 
     private void sendTodayForecast(double maxTemp, double minTemp) {
         PutDataMapRequest dataMap = PutDataMapRequest.create(FORECAST_PATH);
-        dataMap.getDataMap().putDouble(MAX_TEMP_KEY, maxTemp);
-        dataMap.getDataMap().putDouble(MIN_TEMP_KEY, minTemp);
+        String lowString = Utility.formatTemperature(getContext(), minTemp);
+        String highString = Utility.formatTemperature(getContext(), maxTemp);
+        dataMap.getDataMap().putString(MAX_TEMP_KEY, highString);
+        dataMap.getDataMap().putString(MIN_TEMP_KEY, lowString);
         dataMap.getDataMap().putLong("timestamp", System.currentTimeMillis());
         PutDataRequest request = dataMap.asPutDataRequest();
 

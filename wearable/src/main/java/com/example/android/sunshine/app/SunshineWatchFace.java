@@ -124,6 +124,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         float mXOffset;
         float mYOffset;
+        float mLineHeight;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -131,6 +132,9 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
          */
         boolean mLowBitAmbient;
         boolean mShouldDrawColons;
+
+        private String mHighTemp;
+        private String mLowTemp;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -144,6 +148,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                     .build());
             Resources resources = SunshineWatchFace.this.getResources();
             mYOffset = resources.getDimension(com.example.android.sunshine.app.R.dimen.digital_y_offset);
+            mLineHeight = resources.getDimension(R.dimen.digital_line_height);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(com.example.android.sunshine.app.R.color.background));
@@ -186,7 +191,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
                     Wearable.DataApi.removeListener(mGoogleApiClient, this);
                     mGoogleApiClient.disconnect();
-                    Log.d(TAG,"Google API Client disconnected");
+                    Log.d(TAG, "Google API Client disconnected");
                 }
             }
 
@@ -273,6 +278,14 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 text = String.format("%d %02d", mTime.hour, mTime.minute);
             }
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+
+            if (mHighTemp != null && mLowTemp != null) {
+                canvas.drawText(
+                        String.format("%s %s", mHighTemp, mLowTemp),
+                        mXOffset,
+                        mYOffset + mLineHeight,
+                        mTextPaint);
+            }
         }
 
         /**
@@ -325,9 +338,9 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 DataItem item = event.getDataItem();
                 if (FORECAST_PATH.equals(item.getUri().getPath())) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
-                    double maxTemp = dataMap.getDouble(MAX_TEMP_KEY);
-                    double minTemp = dataMap.getDouble(MIN_TEMP_KEY);
-                    Log.d(TAG, "Max Temp=" + maxTemp + "; Min Temp=" + minTemp);
+                    mHighTemp = dataMap.getString(MAX_TEMP_KEY);
+                    mLowTemp = dataMap.getString(MIN_TEMP_KEY);
+                    Log.d(TAG, "Max Temp=" + mHighTemp + "; Min Temp=" + mLowTemp);
                 }
             }
         }
