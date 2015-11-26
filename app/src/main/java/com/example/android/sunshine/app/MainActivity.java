@@ -97,9 +97,6 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
                         if (!dataItemResult.getStatus().isSuccess()) {
                             Log.e(LOG_TAG, "ERROR: failed to putDataItem, status code: "
                                     + dataItemResult.getStatus().getStatusCode());
-                        } else {
-                            Log.d(LOG_TAG, "Data item set: "
-                                    + dataItemResult.getDataItem().getUri());
                         }
                     }
                 });
@@ -191,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     protected void onStop() {
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
+            Log.d(LOG_TAG, "Google API Client disconnected");
         }
         super.onStop();
     }

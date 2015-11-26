@@ -68,13 +68,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
      */
     private static final int MSG_UPDATE_TIME = 0;
 
-    private  static final String TAG = "SunshineWatchFace";
+    private static final String TAG = "SunshineWatchFace";
 
     private static final String FORECAST_PATH = "/forecast";
     private static final String MAX_TEMP_KEY = "max-temp";
     private static final String MIN_TEMP_KEY = "min-temp";
-
-    private GoogleApiClient mGoogleApiClient;
 
     @Override
     public Engine onCreateEngine() {
@@ -104,6 +102,13 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine implements DataApi.DataListener,
             GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
+
+        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFace.this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
@@ -129,15 +134,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onCreate(SurfaceHolder holder) {
-            Log.d(TAG, "OnCreate called");
             super.onCreate(holder);
-
-            //Build the API client
-            mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFace.this)
-                    .addApi(Wearable.API)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .build();
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFace.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
@@ -175,7 +172,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         @Override
         public void onVisibilityChanged(boolean visible) {
             super.onVisibilityChanged(visible);
-            Log.d(TAG, "onVisibilityChanged called");
 
             if (visible) {
                 mGoogleApiClient.connect();
@@ -187,9 +183,10 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             } else {
                 unregisterReceiver();
 
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()){
+                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
                     Wearable.DataApi.removeListener(mGoogleApiClient, this);
                     mGoogleApiClient.disconnect();
+                    Log.d(TAG,"Google API Client disconnected");
                 }
             }
 
@@ -318,7 +315,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onConnectionSuspended(int i) {
-
+            Log.d(TAG, "onConnectionSuspended: " + i);
         }
 
         @Override
@@ -326,7 +323,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             Log.d(TAG, "onDataChanged called");
             for (DataEvent event : dataEventBuffer) {
                 DataItem item = event.getDataItem();
-                if(FORECAST_PATH.equals(item.getUri().getPath())){
+                if (FORECAST_PATH.equals(item.getUri().getPath())) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     double maxTemp = dataMap.getDouble(MAX_TEMP_KEY);
                     double minTemp = dataMap.getDouble(MIN_TEMP_KEY);
