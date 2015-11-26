@@ -38,18 +38,11 @@ import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.PutDataMapRequest;
-import com.google.android.gms.wearable.PutDataRequest;
-import com.google.android.gms.wearable.Wearable;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
-        GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
+public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback {
 
     public static final String PROPERTY_REG_ID = "registration_id";
     /**
@@ -60,15 +53,10 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     private static final String PROPERTY_APP_VERSION = "appVersion";
-    private static final String FORECAST_PATH = "/forecast";
-    private static final String MAX_TEMP_KEY = "max-temp";
-    private static final String MIN_TEMP_KEY = "min-temp";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
-    private static GoogleApiClient mGoogleApiClient;
     private boolean mTwoPane;
     private String mLocation;
     private GoogleCloudMessaging mGcm;
-    private boolean mResolvingError = false;
 
     /**
      * @return Application's version code from the {@code PackageManager}.
@@ -84,33 +72,9 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         }
     }
 
-    public static void sendTodayForecast(double maxTemp, double minTemp) {
-        PutDataMapRequest dataMap = PutDataMapRequest.create(FORECAST_PATH);
-        dataMap.getDataMap().putDouble(MAX_TEMP_KEY, maxTemp);
-        dataMap.getDataMap().putDouble(MIN_TEMP_KEY, minTemp);
-        PutDataRequest request = dataMap.asPutDataRequest();
-
-        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
-                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-                    @Override
-                    public void onResult(DataApi.DataItemResult dataItemResult) {
-                        if (!dataItemResult.getStatus().isSuccess()) {
-                            Log.e(LOG_TAG, "ERROR: failed to putDataItem, status code: "
-                                    + dataItemResult.getStatus().getStatusCode());
-                        }
-                    }
-                });
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
 
         mLocation = Utility.getPreferredLocation(this);
         Uri contentUri = getIntent() != null ? getIntent().getData() : null;
@@ -179,17 +143,10 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     protected void onStart() {
         super.onStart();
-        if (!mResolvingError) {
-            mGoogleApiClient.connect();
-        }
     }
 
     @Override
     protected void onStop() {
-        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-            mGoogleApiClient.disconnect();
-            Log.d(LOG_TAG, "Google API Client disconnected");
-        }
         super.onStop();
     }
 
@@ -379,21 +336,5 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         editor.putString(PROPERTY_REG_ID, regId);
         editor.putInt(PROPERTY_APP_VERSION, appVersion);
         editor.commit();
-    }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(LOG_TAG, "onConnected: " + bundle);
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.d(LOG_TAG, "onConnectionSuspended: " + i);
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(LOG_TAG, "onConnectionFailed: " + connectionResult);
-
     }
 }
