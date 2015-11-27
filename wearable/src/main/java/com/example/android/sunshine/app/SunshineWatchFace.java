@@ -21,11 +21,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -47,6 +50,7 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.TimeZone;
 
@@ -137,7 +141,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         private String mHighTemp;
         private String mLowTemp;
-        private Asset mWeatherIconAsset;
+        private Bitmap mWeatherIcon;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -282,6 +286,10 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             }
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
+            if(mWeatherIcon != null) {
+                canvas.drawBitmap(mWeatherIcon, mXOffset, mYOffset + mLineHeight, null);
+            }
+
             if (mHighTemp != null && mLowTemp != null) {
                 canvas.drawText(
                         String.format("%s %s", mHighTemp, mLowTemp),
@@ -343,7 +351,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     mHighTemp = dataMap.getString(MAX_TEMP_KEY);
                     mLowTemp = dataMap.getString(MIN_TEMP_KEY);
-                    mWeatherIconAsset = dataMap.getAsset(WEATHER_ICON_KEY);
+                    new LoadBitmapAsyncTask().execute(dataMap.getAsset(WEATHER_ICON_KEY));
                     Log.d(TAG, "Max Temp=" + mHighTemp + "; Min Temp=" + mLowTemp);
                 }
             }
@@ -352,6 +360,39 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         @Override
         public void onConnectionFailed(ConnectionResult connectionResult) {
 
+        }
+
+        private class LoadBitmapAsyncTask extends AsyncTask<Asset, Void, Bitmap> {
+
+            @Override
+            protected Bitmap doInBackground(Asset... params) {
+
+                if(params.length > 0) {
+
+                    Asset asset = params[0];
+
+                    InputStream assetInputStream = Wearable.DataApi.getFdForAsset(
+                            mGoogleApiClient, asset).await().getInputStream();
+
+                    if (assetInputStream == null) {
+                        Log.w(TAG, "Requested an unknown Asset.");
+                        return null;
+                    }
+                    return BitmapFactory.decodeStream(assetInputStream);
+
+                } else {
+                    Log.e(TAG, "Asset must be non-null");
+                    return null;
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Bitmap bitmap) {
+
+                if(bitmap != null) {
+                    mWeatherIcon = bitmap;
+                }
+            }
         }
     }
 }
