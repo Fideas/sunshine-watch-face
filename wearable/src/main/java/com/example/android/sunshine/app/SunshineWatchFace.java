@@ -118,6 +118,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
+        Paint mTemperaturePaint;
         boolean mAmbient;
         Time mTime;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -160,8 +161,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(com.example.android.sunshine.app.R.color.background));
 
-            mTextPaint = new Paint();
             mTextPaint = createTextPaint(resources.getColor(com.example.android.sunshine.app.R.color.digital_text));
+            mTemperaturePaint = createTextPaint(resources.getColor(com.example.android.sunshine.app.R.color.digital_text));
 
             mTime = new Time();
         }
@@ -237,6 +238,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                     ? com.example.android.sunshine.app.R.dimen.digital_text_size_round : com.example.android.sunshine.app.R.dimen.digital_text_size);
 
             mTextPaint.setTextSize(textSize);
+            mTemperaturePaint.setTextSize(resources.getDimension(R.dimen.digital_temp_text_size));
         }
 
         @Override
@@ -271,6 +273,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
             String text;
+            float x = mXOffset;
             // Draw the background.
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
@@ -287,15 +290,19 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
             if(mWeatherIcon != null) {
-                canvas.drawBitmap(mWeatherIcon, mXOffset, mYOffset + mLineHeight, null);
+                float y = mYOffset
+                        + mLineHeight
+                        - getResources().getDimension(R.dimen.weather_icon_height) / 2;
+                canvas.drawBitmap(mWeatherIcon, x, y, null);
+                x += mWeatherIcon.getWidth();
             }
 
             if (mHighTemp != null && mLowTemp != null) {
                 canvas.drawText(
                         String.format("%s %s", mHighTemp, mLowTemp),
-                        mXOffset,
+                        x,
                         mYOffset + mLineHeight,
-                        mTextPaint);
+                        mTemperaturePaint);
             }
         }
 
@@ -390,7 +397,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             protected void onPostExecute(Bitmap bitmap) {
 
                 if(bitmap != null) {
-                    mWeatherIcon = bitmap;
+                    mWeatherIcon = Bitmap.createScaledBitmap(
+                            bitmap,
+                            getResources().getDimensionPixelSize(R.dimen.weather_icon_width),
+                            getResources().getDimensionPixelSize(R.dimen.weather_icon_height),
+                            false);
                 }
             }
         }
