@@ -39,6 +39,7 @@ import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -88,6 +89,9 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
     private static final String FORECAST_PATH = "/forecast";
     private static final String MAX_TEMP_KEY = "max-temp";
     private static final String MIN_TEMP_KEY = "min-temp";
+    private static final String WEATHER_ICON_KEY = "weather-icon";
+    private static final String TIMESTAMP_KEY = "timestamp";
+
     public final String LOG_TAG = SunshineSyncAdapter.class.getSimpleName();
     private GoogleApiClient mGoogleApiClient;
     private boolean mResolvingError = false;
@@ -442,7 +446,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
                 low = temperatureObject.getDouble(OWM_MIN);
 
                 if (i == 0) {
-                    sendTodayForecast(high, low);
+                    sendTodayForecast(high, low, weatherId);
                 }
 
                 ContentValues weatherValues = new ContentValues();
@@ -678,13 +682,16 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
 
     }
 
-    private void sendTodayForecast(double maxTemp, double minTemp) {
+    private void sendTodayForecast(double maxTemp, double minTemp, int weatherId) {
         PutDataMapRequest dataMap = PutDataMapRequest.create(FORECAST_PATH);
         String lowString = Utility.formatTemperature(getContext(), minTemp);
         String highString = Utility.formatTemperature(getContext(), maxTemp);
         dataMap.getDataMap().putString(MAX_TEMP_KEY, highString);
         dataMap.getDataMap().putString(MIN_TEMP_KEY, lowString);
-        dataMap.getDataMap().putLong("timestamp", System.currentTimeMillis());
+        int artResource = Utility.getArtResourceForWeatherCondition(weatherId);
+        Asset weatherIcon = Utility.toAsset(artResource, getContext());
+        dataMap.getDataMap().putAsset(WEATHER_ICON_KEY, weatherIcon);
+        dataMap.getDataMap().putLong(TIMESTAMP_KEY, System.currentTimeMillis());
         PutDataRequest request = dataMap.asPutDataRequest();
 
         Wearable.DataApi.putDataItem(mGoogleApiClient, request)
