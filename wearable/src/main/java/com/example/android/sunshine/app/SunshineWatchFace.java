@@ -38,6 +38,7 @@ import android.view.WindowInsets;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -73,6 +74,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
     private static final String FORECAST_PATH = "/forecast";
     private static final String MAX_TEMP_KEY = "max-temp";
     private static final String MIN_TEMP_KEY = "min-temp";
+    private static final String WEATHER_ICON_KEY = "weather-icon";
 
     @Override
     public Engine onCreateEngine() {
@@ -135,6 +137,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
 
         private String mHighTemp;
         private String mLowTemp;
+        private Asset mWeatherIconAsset;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -340,6 +343,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     mHighTemp = dataMap.getString(MAX_TEMP_KEY);
                     mLowTemp = dataMap.getString(MIN_TEMP_KEY);
+                    mWeatherIconAsset = dataMap.getAsset(WEATHER_ICON_KEY);
                     Log.d(TAG, "Max Temp=" + mHighTemp + "; Min Temp=" + mLowTemp);
                 }
             }
