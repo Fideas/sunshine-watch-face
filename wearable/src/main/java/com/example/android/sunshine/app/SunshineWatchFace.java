@@ -61,6 +61,8 @@ import java.util.TimeZone;
 public class SunshineWatchFace extends CanvasWatchFaceService {
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+    private static final Typeface CONDENSED_TYPEFACE =
+            Typeface.create("sans-serif-condensed", Typeface.NORMAL);
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -161,8 +163,12 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(com.example.android.sunshine.app.R.color.background));
 
-            mTextPaint = createTextPaint(resources.getColor(com.example.android.sunshine.app.R.color.digital_text));
-            mTemperaturePaint = createTextPaint(resources.getColor(com.example.android.sunshine.app.R.color.digital_text));
+            mTextPaint = createTextPaint(
+                    resources.getColor(com.example.android.sunshine.app.R.color.digital_text),
+                    NORMAL_TYPEFACE);
+            mTemperaturePaint = createTextPaint(
+                    resources.getColor(com.example.android.sunshine.app.R.color.digital_text),
+                    CONDENSED_TYPEFACE);
 
             mTime = new Time();
         }
@@ -174,10 +180,10 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             super.onDestroy();
         }
 
-        private Paint createTextPaint(int textColor) {
+        private Paint createTextPaint(int textColor, Typeface typeface) {
             Paint paint = new Paint();
             paint.setColor(textColor);
-            paint.setTypeface(NORMAL_TYPEFACE);
+            paint.setTypeface(typeface);
             paint.setAntiAlias(true);
             return paint;
         }
@@ -289,7 +295,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             }
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
-            if(mWeatherIcon != null) {
+            if(mWeatherIcon != null && !isInAmbientMode()) {
                 float y = mYOffset
                         + mLineHeight
                         - getResources().getDimension(R.dimen.weather_icon_height) / 2;
