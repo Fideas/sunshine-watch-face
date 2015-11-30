@@ -279,7 +279,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
             String text;
-            float x = mXOffset;
             // Draw the background.
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
@@ -299,11 +298,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
                 float y = mYOffset
                         + mLineHeight
                         - getResources().getDimension(R.dimen.weather_icon_height) / 2;
-                canvas.drawBitmap(mWeatherIcon, x, y, null);
-                x += mWeatherIcon.getWidth();
+                canvas.drawBitmap(mWeatherIcon, mXOffset, y, null);
             }
 
             if (mHighTemp != null && mLowTemp != null) {
+                float x = getResources().getDimensionPixelSize(R.dimen.digital_temp_x_offset);
                 canvas.drawText(
                         String.format("%s %s", mHighTemp, mLowTemp),
                         x,
