@@ -132,6 +132,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
         };
 
         float mXOffset;
+        float mTempXOffset;
         float mYOffset;
         float mLineHeight;
 
@@ -240,6 +241,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             boolean isRound = insets.isRound();
             mXOffset = resources.getDimension(isRound
                     ? com.example.android.sunshine.app.R.dimen.digital_x_offset_round : com.example.android.sunshine.app.R.dimen.digital_x_offset);
+            mTempXOffset = resources.getDimension(isRound
+                    ? R.dimen.digital_temp_x_offset_round : R.dimen.digital_temp_x_offset);
             float textSize = resources.getDimension(isRound
                     ? com.example.android.sunshine.app.R.dimen.digital_text_size_round : com.example.android.sunshine.app.R.dimen.digital_text_size);
 
@@ -294,7 +297,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             }
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
-            if(mWeatherIcon != null && !isInAmbientMode()) {
+            if (mWeatherIcon != null && !isInAmbientMode()) {
                 float y = mYOffset
                         + mLineHeight
                         - getResources().getDimension(R.dimen.weather_icon_height) / 2;
@@ -302,10 +305,9 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             }
 
             if (mHighTemp != null && mLowTemp != null) {
-                float x = getResources().getDimensionPixelSize(R.dimen.digital_temp_x_offset);
                 canvas.drawText(
                         String.format("%s %s", mHighTemp, mLowTemp),
-                        x,
+                        mTempXOffset,
                         mYOffset + mLineHeight,
                         mTemperaturePaint);
             }
@@ -379,7 +381,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             @Override
             protected Bitmap doInBackground(Asset... params) {
 
-                if(params.length > 0) {
+                if (params.length > 0) {
 
                     Asset asset = params[0];
 
@@ -401,7 +403,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService {
             @Override
             protected void onPostExecute(Bitmap bitmap) {
 
-                if(bitmap != null) {
+                if (bitmap != null) {
                     mWeatherIcon = Bitmap.createScaledBitmap(
                             bitmap,
                             getResources().getDimensionPixelSize(R.dimen.weather_icon_width),
